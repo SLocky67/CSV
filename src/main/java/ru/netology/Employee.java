@@ -1,5 +1,4 @@
 package ru.netology;
-
 public class Employee {
     public long id;
     public String firstName;

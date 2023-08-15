@@ -4,7 +4,6 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 import com.opencsv.CSVReader;
-import com.opencsv.CSVWriter;
 import com.opencsv.bean.ColumnPositionMappingStrategy;
 import com.opencsv.bean.CsvToBean;
 import com.opencsv.bean.CsvToBeanBuilder;
@@ -15,7 +14,6 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerConfigurationException;
 import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
@@ -86,72 +84,78 @@ public class Main {
 
 
     private static List<Employee> parseXML(String xmlFileName) throws ParserConfigurationException, IOException, SAXException {
-        List<String> elements = new ArrayList<>();
         List<Employee> list = new ArrayList<>();
-        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-        DocumentBuilder builder = factory.newDocumentBuilder();
-        Document doc = builder.parse(new File(xmlFileName));
-        Node root = doc.getDocumentElement();
+        //  File file = new File("data.xml");
+        DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
+        DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
+        Document document = documentBuilder.parse(new File(xmlFileName));
+        Node root = document.getDocumentElement();
         NodeList nodeList = root.getChildNodes();
+        document.getDocumentElement().normalize();
+
         for (int i = 0; i < nodeList.getLength(); i++) {
             Node node = nodeList.item(i);
-            if (node.getNodeName().equals("employee")) {
-                NodeList nodeList1 = node.getChildNodes();
-                for (int j = 0; j < nodeList1.getLength(); j++) {
-                    Node node_ = nodeList1.item(j);
-                    if (Node.ELEMENT_NODE == node_.getNodeType()) {
-                        elements.add(node_.getTextContent());
-                    }
-                }
-                list.add(new Employee(
-                        Long.parseLong(elements.get(0)),
-                        elements.get(1),
-                        elements.get(2),
-                        elements.get(3),
-                        Integer.parseInt(elements.get(4))));
-                elements.clear();
+
+            if (node.getNodeType() == Node.ELEMENT_NODE) {
+                Element element = (Element) node;
+
+                long id = Long.parseLong(element.getElementsByTagName("id").item(0).getTextContent());
+                String firstName = element.getElementsByTagName("firstName").item(0).getTextContent();
+                String lastName = element.getElementsByTagName("lastName").item(0).getTextContent();
+                String country = element.getElementsByTagName("country").item(0).getTextContent();
+                int age = Integer.parseInt(element.getElementsByTagName("age").item(0).getTextContent());
+
+                Employee employee = new Employee(id, firstName, lastName, country, age);
+                list.add(employee);
             }
         }
         return list;
     }
 
-    private static void createXml(String xmlFileName) throws ParserConfigurationException, TransformerException {
-        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-        DocumentBuilder builder = factory.newDocumentBuilder();
-        Document document = builder.newDocument();
-        Element root = document.createElement("root");
-        document.appendChild(root);
-        Element company = document.createElement("company");
-        root.appendChild(company);
-        Element equipment = document.createElement("equipment");
-        company.appendChild(equipment);
-        Element staff = document.createElement("staff");
-        company.appendChild(staff);
+
+    private static void createXml(String xmlFileName) throws ParserConfigurationException, TransformerException, IOException, SAXException {
+        final List<Employee> employees = List.of(
+                new Employee(1, "John", "Smith", "USA", 25),
+                new Employee(2, "Ivan", "Petrov", "RU", 23));
+
+        DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+        DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
+        Document document = dBuilder.newDocument();
+
+        Element rootElement = document.createElement("staff");
+        document.appendChild(rootElement);
 
 
-        Element employee = document.createElement("employee");
-        employee.setAttribute("id", "1");
-        employee.setAttribute("firstname", "John");
-        employee.setAttribute("lastname", "Smith");
-        employee.setAttribute("country", "USA");
-        employee.setAttribute("age", "25");
-        staff.appendChild(employee);
 
+        for (Employee employee : employees) {
+            Element employeeElement = document.createElement("employee");
+            rootElement.appendChild(employeeElement);
 
-        Element employee2 = document.createElement("employee");
-        employee2.setAttribute("id", "2");
-        employee2.setAttribute("firstname", "Ivan");
-        employee2.setAttribute("lastname", "Petrov");
-        employee2.setAttribute("country", "RU");
-        employee2.setAttribute("age", "23");
-        staff.appendChild(employee2);
-        employee.appendChild(employee2);
+            Element id = document.createElement("id");
+            id.appendChild(document.createTextNode(String.valueOf(employee.id)));
+            employeeElement.appendChild(id);
+
+            Element firstName = document.createElement("firstName");
+            firstName.appendChild(document.createTextNode(employee.firstName));
+            employeeElement.appendChild(firstName);
+
+            Element lastName = document.createElement("lastName");
+            lastName.appendChild(document.createTextNode(employee.lastName));
+            employeeElement.appendChild(lastName);
+
+            Element country = document.createElement("country");
+            country.appendChild(document.createTextNode(employee.country));
+            employeeElement.appendChild(country);
+
+            Element age = document.createElement("age");
+            age.appendChild(document.createTextNode(String.valueOf(employee.age)));
+            employeeElement.appendChild(age);
+        }
         DOMSource domSource = new DOMSource(document);
         StreamResult streamResult = new StreamResult(new File("data.xml"));
         TransformerFactory transformerFactory = TransformerFactory.newInstance();
         Transformer transformer = transformerFactory.newTransformer();
         transformer.transform(domSource, streamResult);
-
     }
 }
 
